@@ -10,7 +10,7 @@ function makeOfxDate(jsDate) {
     ret += (""+jsDate.getUTCHours()).padStart(2,"0");
     ret += (""+jsDate.getUTCMinutes()).padStart(2,"0");
     ret += (""+jsDate.getUTCSeconds()).padStart(2,"0");
-    ret += ("."+jsDate.getUTCMilliseconds()).padStart(3,"0");
+    ret += "." + (""+jsDate.getUTCMilliseconds()).padStart(3,"0");
     ret += "[+00]";
 
     return ret;
@@ -41,6 +41,16 @@ NEWFILEUID:NONE
     return ret;
 }
 
+function makeBalance(amount,balanceDate) {
+    ret =
+`   <LEDGERBAL>
+        <BALAMT>${amount.toFixed(2)}
+        <DTASOF>${makeOfxDate(balanceDate)}
+    </LEDGERBAL>
+`;
+    return ret;
+}
+
 function makeFooter() {
     ret =
 `</STMTRS>
@@ -52,11 +62,13 @@ const fs = require('node:fs');
 
 const outFile = 'test.ofx';
 
+const now = new Date(Date.now());
 
 let content = '';
 
-content += makeHeader(new Date(Date.now()));
+content += makeHeader(now);
 
+content += makeBalance(100, now);
 
 content += makeFooter();
 

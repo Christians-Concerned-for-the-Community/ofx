@@ -1,0 +1,9 @@
+Transaction types
+
+FEE
+CREDIT
+POS
+DIRECTDEP
+CHECK
+DIRECTDEBIT
+DEP
