@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 
 
-function makeOfxDate(jsDate) {
+function safe(str) {
+    return str
+        .replaceAll("&", "&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&rt;");
+}
+
+function makeOfxDate(date) {
+    const jsDate = new Date(date);
     ret = "";
 
     ret += jsDate.getUTCFullYear();
@@ -36,26 +44,42 @@ NEWFILEUID:NONE
 <LANGUAGE>ENG
 </SONRS>
 <BANKMSGSRSV1><STMTTRNRS><TRNUID>0<STATUS><CODE>0<SEVERITY>INFO</STATUS>
-<STMTRS>
-`;
+<STMTRS>`;
     return ret;
 }
 
 function makeBalance(amount,balanceDate) {
-    ret =
-`   <LEDGERBAL>
+    return `
+    <LEDGERBAL>
         <BALAMT>${amount.toFixed(2)}
         <DTASOF>${makeOfxDate(balanceDate)}
-    </LEDGERBAL>
-`;
+    </LEDGERBAL>`;
+}
+
+function makeTransaction(type, date, amount, id, name, memo) {
+    ret = `
+    <STMTTRN>
+        <TRNTYPE>${type}
+        <DTPOSTED>${makeOfxDate(date)}
+        <TRNAMT>${amount.toFixed(2)}
+        <FITID>${safe(id)}`;
+    if (name) {
+        ret += `
+        <NAME>${safe(name)}`;
+    }
+    if (memo) {
+        ret += `
+        <MEMO>${safe(memo)}`;
+    }
+    ret += `
+    </STMTTRN>`;
     return ret;
 }
 
 function makeFooter() {
-    ret =
-`</STMTRS>
+    return `
+</STMTRS>
 </STMTTRNRS></BANKMSGSRSV1></OFX>`;
-    return ret;
 }
 
 const fs = require('node:fs');
@@ -67,6 +91,15 @@ const now = new Date(Date.now());
 let content = '';
 
 content += makeHeader(now);
+
+content += makeTransaction(
+    "CREDIT",
+    "2023-11-09T03:24:00Z",
+    12.35,
+    "871a934d-b47c-45d3-a92f-e124ee0ca3e5",
+    "Test transaction #1",
+    "testing - dev - <can you believe &>?"
+);
 
 content += makeBalance(100, now);
 
