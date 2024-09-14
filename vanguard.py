@@ -14,10 +14,15 @@ from datetime import datetime,timedelta,timezone
 
 
 def fromOfxDate(ofxDate):
-  m = re.search(r'\[([-+]?[0-9]+)',ofxDate)
   tz = timezone.utc
-  if m:
-    tz = timezone(timedelta(hours = int(m[1])))
+  
+  ## NOTE: currently the timestamps provided by Vanguard in their QFX files
+  ##       are buggy - they include an offset into local time (EST), but the
+  ##       actual recorded date and time are in UTC. So, just ignore the offset.
+  #
+  #m = re.search(r'\[([-+]?[0-9]+)',ofxDate)
+  #if m:
+  #  tz = timezone(timedelta(hours = int(m[1])))
 
   return datetime(
     year=int(ofxDate[0:4]),
