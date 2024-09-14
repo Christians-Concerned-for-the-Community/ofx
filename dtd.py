@@ -29,11 +29,14 @@ for filename in args.inputs:
                 # Parse out the tag name.
                 names = line.split()[1]
 
-                # Remove wrapping parenthesis, if any.
-                names = names[names.find('(')+1:names.find(')')]
+                if '(' in names:
+                    # Remove wrapping parenthesis, if any.
+                    names = names[names.find('(')+1:names.rfind(')')]
 
-                # Split by comma, if there are multiple element names.
-                names = names.split(',')
+                    # Split by comma, if there are multiple element names.
+                    names = names.split(',')
+                else:
+                    names = [names]
 
                 # Add it to either elements or aggregates list.
                 for name in names:
