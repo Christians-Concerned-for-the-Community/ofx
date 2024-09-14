@@ -105,6 +105,7 @@ NEWFILEUID:NONE
       <DTPOSTED>{toOfxDate(fromOfxDate(pDate.search(m[1])[1]))}
       <TRNAMT>{pAmount.search(m[1])[1].replace('-','')}
       <FITID>{pId.search(m[1])[1]}
+      <NAME>Dividend
     </STMTTRN>''')
 
 
@@ -120,6 +121,7 @@ NEWFILEUID:NONE
       <DTPOSTED>{toOfxDate(fromOfxDate(pDate.search(m[1])[1]))}
       <TRNAMT>{pAmount.search(m[1])[1]}
       <FITID>{pId.search(m[1])[1]}
+      <NAME>Transfer
     </STMTTRN>''')
       
     # Write footer.
