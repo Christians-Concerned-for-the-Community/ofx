@@ -14,7 +14,7 @@ import json
 def isBlank(str):
     return (not str) or str.isspace()
 
-argparser = argparse.ArgumentParser("paypal.py")
+argparser = argparse.ArgumentParser("dtd.py")
 argparser.add_argument("inputs", nargs="+")
 argparser.add_argument("-o","--output",default="output.json")
 args = argparser.parse_args()
@@ -27,13 +27,20 @@ for filename in args.inputs:
         while line := file.readline():
             if line.startswith('<!ELEMENT '):
                 # Parse out the tag name.
-                name = line.split()[1]
+                names = line.split()[1]
+
+                # Remove wrapping parenthesis, if any.
+                names = names[names.find('(')+1:names.find(')')]
+
+                # Split by comma, if there are multiple element names.
+                names = names.split(',')
 
                 # Add it to either elements or aggregates list.
-                if " - - " in line:
-                    aggregates.add(name)
-                else:
-                    elements.add(name)
+                for name in names:
+                    if " - - " in line:
+                        aggregates.add(name)
+                    else:
+                        elements.add(name)
 
 
 elementList = list(elements)
