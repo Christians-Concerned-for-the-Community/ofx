@@ -135,3 +135,7 @@ NEWFILEUID:NONE
 </STMTRS>
 </STMTTRNRS></BANKMSGSRSV1>
 </OFX>''')
+
+    # Tell user that we wrote the file.
+    print('Wrote file: ' + args.output)
+
