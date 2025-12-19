@@ -92,12 +92,11 @@ NEWFILEUID:NONE
 
     # Common patterns.
     pId = re.compile(r'<FITID>\s*(.+?)\s*<')
-
-    # Read and write each dividend reinvestment.
-    p = re.compile(r'<REINVEST>\s*(.+?)\s*</REINVEST>',re.DOTALL)
     pDate = re.compile(r'<DTSETTLE>\s*(.+?)\s*<')
     pAmount = re.compile(r'<TOTAL>\s*(.+?)\s*<')
 
+    # Read and write each dividend reinvestment.
+    p = re.compile(r'<REINVEST>\s*(.+?)\s*</REINVEST>',re.DOTALL)
     for m in p.finditer(inData):
       outFile.write(f'''
     <STMTTRN>
@@ -108,6 +107,20 @@ NEWFILEUID:NONE
       <NAME>Dividend
     </STMTTRN>''')
 
+    # Read and write each stock sale.
+    p = re.compile(r'<SELLSTOCK>\s*(.+?)\s*</SELLSTOCK>',re.DOTALL)
+    pUnits = re.compile(r'<UNITS>\s*(.+?)\s*<')
+    pSecId = re.compile(r'<UNIQUEID>\s*(.+?)\s*<')
+    pSecIdType = re.compile(r'<UNIQUEIDTYPE>\s*(.+?)\s*<')
+    for m in p.finditer(inData):
+      outFile.write(f'''
+    <STMTTRN>
+      <TRNTYPE>CREDIT
+      <DTPOSTED>{toOfxDate(fromOfxDate(pDate.search(m[1])[1]))}
+      <TRNAMT>{pAmount.search(m[1])[1].replace('-','')}
+      <FITID>{pId.search(m[1])[1]}
+      <NAME>Stock sale: {pUnits.search(m[1])[1].replace('-','')} shares of [{pSecIdType.search(m[1])[1]}]{pSecId.search(m[1])[1]}
+    </STMTTRN>''')
 
     # Read and write each bank transfer in and out.
     p = re.compile(r'<INVBANKTRAN>\s*(.+?)\s*</INVBANKTRAN>',re.DOTALL)
