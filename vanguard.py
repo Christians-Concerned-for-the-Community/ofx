@@ -124,19 +124,67 @@ NEWFILEUID:NONE
 
     # Read and write each bank transfer in and out.
     p = re.compile(r'<INVBANKTRAN>\s*(.+?)\s*</INVBANKTRAN>',re.DOTALL)
-    pDate = re.compile(r'<DTPOSTED>\s*(.+?)\s*<')
-    pAmount = re.compile(r'<TRNAMT>\s*(.+?)\s*<')
+    pPosted = re.compile(r'<DTPOSTED>\s*(.+?)\s*<')
+    pTrnAmt = re.compile(r'<TRNAMT>\s*(.+?)\s*<')
 
+    bankTransfers = set() # (date, amount) of each INVBANKTRAN, used to skip duplicate sweeps
     for m in p.finditer(inData):
+      date = fromOfxDate(pPosted.search(m[1])[1])
+      amount = pTrnAmt.search(m[1])[1]
+      bankTransfers.add((date.date(), float(amount)))
       outFile.write(f'''
     <STMTTRN>
-      <TRNTYPE>{'XFER'}
-      <DTPOSTED>{toOfxDate(fromOfxDate(pDate.search(m[1])[1]))}
-      <TRNAMT>{pAmount.search(m[1])[1]}
+      <TRNTYPE>XFER
+      <DTPOSTED>{toOfxDate(date)}
+      <TRNAMT>{amount}
       <FITID>{pId.search(m[1])[1]}
       <NAME>Transfer
     </STMTTRN>''')
-      
+
+    # Read and write each sweep into or out of the settlement fund.
+    #
+    # Starting in late 2026, Vanguard reports bank transfers as a sale (sweep out) or
+    # purchase (sweep in) of the settlement fund instead of as an INVBANKTRAN. If a file
+    # contains both for the same transfer (same date and amount), only the INVBANKTRAN is kept.
+    pMemo = re.compile(r'<MEMO>\s*(.+?)\s*<')
+    sweeps = [
+      ('SELLMF', 'Sweep Out', -1),
+      ('BUYMF',  'Sweep In',  +1),
+    ]
+    unhandledSweepless = {'SELLMF': 0, 'BUYMF': 0}
+    for tag, memoText, sign in sweeps:
+      p = re.compile(rf'<{tag}>\s*(.+?)\s*</{tag}>', re.DOTALL)
+      for m in p.finditer(inData):
+        memo = pMemo.search(m[1])
+        if not memo or memoText.lower() not in memo[1].lower():
+          unhandledSweepless[tag] += 1
+          continue
+        date = fromOfxDate(pDate.search(m[1])[1])
+        amount = sign * abs(float(pAmount.search(m[1])[1]))
+        if (date.date(), amount) in bankTransfers:
+          continue
+        outFile.write(f'''
+    <STMTTRN>
+      <TRNTYPE>XFER
+      <DTPOSTED>{toOfxDate(date)}
+      <TRNAMT>{amount:.2f}
+      <FITID>{pId.search(m[1])[1]}
+      <NAME>Transfer
+    </STMTTRN>''')
+
+    # Warn about any transactions in the input that weren't converted.
+    unhandled = {}
+    for tag in re.findall(r'<(BUYDEBT|BUYMF|BUYOPT|BUYOTHER|BUYSTOCK|CLOSUREOPT|INCOME|INVEXPENSE|'
+                          r'JRNLFUND|JRNLSEC|MARGININTEREST|RETOFCAP|SELLDEBT|SELLMF|SELLOPT|'
+                          r'SELLOTHER|SPLIT|TRANSFER)>', inData):
+      if tag not in unhandledSweepless:
+        unhandled[tag] = unhandled.get(tag, 0) + 1
+    for tag, count in unhandledSweepless.items():
+      if count:
+        unhandled[tag] = count
+    for tag, count in unhandled.items():
+      print(f'WARNING: skipped {count} <{tag}> transaction(s) - not converted, enter manually if needed')
+
     # Write footer.
     balance = re.search(r'<AVAILCASH>\s*(.+?)\s*<', inData)[1]
     outFile.write(f'''
@@ -149,6 +197,8 @@ NEWFILEUID:NONE
 </STMTTRNRS></BANKMSGSRSV1>
 </OFX>''')
 
-    # Tell user that we wrote the file.
+    # Tell user that we wrote the file, and the balance to check against QBO after import.
     print('Wrote file: ' + args.output)
+    print(f'Ending balance: {balance} as of {endDate.strftime("%m/%d/%Y")} - '
+          'Vanguard register in QBO should match this after import')
 
